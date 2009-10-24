@@ -1,0 +1,92 @@
+
+body {
+	background-color: #FFFFFF;
+	text-align: center;
+	margin: 0;
+	padding: 20px 0px;
+}
+
+#canvas {
+	margin: auto 0;
+}
+
+img.preloader {
+	display: none;
+}
+
+#menu a {
+	display: block;
+	width: 10em;
+	line-height: 1.5;
+	text-decoration: none;
+	background-color: #333;
+	color: #FFF;
+	margin: 10px auto;
+}
+
+#howto {
+	background-color: #333;
+	color: #FFF;
+	padding: 10px;
+	font-size: 90%;
+	display: none;
+}
+
+#howto h1 {
+	font-size: 120%;
+	margin: 0 0 0 10px;
+	padding: 0;
+}
+
+#howto h2 {
+	font-size: 100%;
+	margin: 0 0 0 10px;
+	padding: 0;
+}
+
+#howto .section {
+	background-color: #222222;
+	margin: 10px 0;
+	padding: 10px;
+}
+
+#howto table {
+	margin: 10px auto;
+}
+#howto table th {
+	text-align: right;
+	padding-right: 10px;
+}
+#howto table td {
+	text-align: left;
+}
+
+#howto ul {
+	list-style-type: none;
+	text-align: left;
+	line-height: 1.5;
+}
+#howto ul img {
+	vertical-align: middle;
+	width: 20px;
+	height: 20px;
+}
+#howto ul li {
+	margin-bottom: 10px;
+}
+
+#howto h3 {
+	font-size: 90%;
+	margin: 10px auto 5px;
+}
+#howto h3 strong {
+	color: #FFFF00;
+}
+
+#howto .example {
+	margin: 5px auto;
+}
+
+
+
+
