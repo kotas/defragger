@@ -7,12 +7,13 @@
 var MSEC_PER_FRAME           = 50;
 var MAX_EMIT_LINE_FRAMES     = 100;
 var MIN_EMIT_LINE_FRAMES     = 1;
+var EMIT_LINES_ON_LEVEL_UP   = 5;
 var SCORE_PER_LINE           = 100;
 var SCORE_PER_LEVEL          = 20;
 var SCORE_FACTOR_PER_COMBO   = 0.2;
 var FADE_OUT_INITIAL_OPACITY = 0.5;
-var FADE_OUT_SPEED_BASE      = 0.005;
-var FADE_OUT_SPEED_PER_LEVEL = 0.0002;
+var FADE_OUT_SPEED_BASE      = 0.01;
+var FADE_OUT_SPEED_PER_LEVEL = 0.0004;
 var SHOT_MOVING_STEP         = 0.25;
 var WORKER_MOVING_STEP       = 0.25;
 var LEVEL_UP_INITIAL         = 500;
@@ -37,12 +38,15 @@ var Game = function (canvas, images, options) {
 	this.combo        = 0;
 	this.comboMax     = 0;
 	this.levelUpScore = LEVEL_UP_INITIAL;
+	this.onGameStart  = options.onGameStart;
+	this.onGameOver   = options.onGameOver;
 
 	this.field  = new Field(this.fieldWidth, this.fieldHeight);
 	this.worker = new Worker(this.fieldWidth);
 	this.shots  = [];
 	this.view   = new View(this, canvas, images);
 
+	// Set up initial lines
 	var initialLines = options.initialLines === undefined ? 3 : options.initialLines;
 	for (var i = 0; i < initialLines; i++) {
 		this.field.emitNextLine();
@@ -53,23 +57,31 @@ Game.prototype = {
 	start: function () {
 		this.view.gameStart();
 		this.resetNextLineTimer();
+
 		var self = this;
 		this.updateTimer = setInterval(function () {
+			// Main loop!
 			self.step();
 			self.view.renderField();
 		}, MSEC_PER_FRAME);
+
+		if (this.onGameStart)
+			this.onGameStart(this);
 	},
 
-	over: function () {
+	gameOver: function () {
 		clearInterval(this.updateTimer);
 		this.view.gameOver();
+
+		if (this.onGameOver)
+			this.onGameOver(this);
 	},
 
 	emitNextLine: function () {
 		if (this.field.emitNextLine()) {
 			this.resetNextLineTimer();
 		} else {
-			this.over();
+			this.gameOver();
 		}
 	},
 
@@ -82,21 +94,21 @@ Game.prototype = {
 		);
 	},
 
-	takeBlock: function (x) {
-		if (this.stock < this.maxStock && this.field.takeBlock(x)) {
+	takeBlockFromFrontLine: function (x) {
+		if (this.stock < this.maxStock && this.field.takeBlockFromFrontLine(x)) {
 			this.stock++;
 			if (this.field.hasCleanFrontLine())
-				this.eraseFrontLine();
+				this.eraseFrontLine();     // this internally calls view.renderStatus
 			else
 				this.view.renderStatus();
 		}
 	},
 
-	fillBlock: function (x) {
-		if (this.stock > 0 && this.field.fillBlock(x)) {
+	fillBlockInFrontLine: function (x) {
+		if (this.stock > 0 && this.field.fillBlockInFrontLine(x)) {
 			this.stock--;
 			if (this.field.hasCleanFrontLine())
-				this.eraseFrontLine();
+				this.eraseFrontLine();     // this internally calls view.renderStatus
 			else
 				this.view.renderStatus();
 		}
@@ -108,18 +120,23 @@ Game.prototype = {
 
 		this.score += (SCORE_PER_LINE + this.level*SCORE_PER_LEVEL) *
 				(1 + this.combo*SCORE_FACTOR_PER_COMBO);
+
 		if (this.score >= this.levelUpScore && this.level < this.maxLevel) {
-			this.level++;
-			this.levelUpScore *= LEVEL_UP_FACTOR;
-			while (this.field.getLineCount() < 5) {
-				this.emitNextLine();
-			}
+			this.levelUp();
 		}
 
 		this.erasedCount++;
 		this.field.eraseFrontLine();
 		this.view.renderStatus();
 		this.view.eraseFrontLine();
+	},
+
+	levelUp: function () {
+		this.level++;
+		this.levelUpScore *= LEVEL_UP_FACTOR;
+		while (this.field.getLineCount() < EMIT_LINES_ON_LEVEL_UP) {
+			this.emitNextLine();
+		}
 	},
 
 	moveWorkerLeft: function () {
@@ -147,6 +164,7 @@ Game.prototype = {
 			this.emitNextLine();
 
 		this.worker.step();
+
 		for (var i = this.shots.length - 1; i >= 0; i--) {
 			var row = this.shots[i].step();
 			if (row < this.field.getLineCount()) {
@@ -156,6 +174,7 @@ Game.prototype = {
 		}
 
 		this.field.fadeLines(
+			
 			FADE_OUT_SPEED_BASE +
 			FADE_OUT_SPEED_PER_LEVEL * this.level);
 	}
@@ -204,7 +223,8 @@ Block.Fixed = {
 
 
 var Line = function (width) {
-	this.opacity = 1.0;
+	this.fading = false;
+	this.fadingCounter = 1.0;   // moves 1.0 -> 0.0 when fading
 	this.blocks = new Array(width);
 	for (var x = 0; x < width; x++) {
 		this.blocks[x] = Block.Empty;
@@ -243,16 +263,23 @@ Line.prototype = {
 		for (var x = 0, b = this.blocks, w = b.length; x < w; x++) {
 			color = color & b[x].color;
 		}
+		// if any bit stays on, then all blocks must have the same color.
 		return color != 0;
 	},
 
-	fade: function (step) {
-		this.opacity -= step;
-		return this.opacity > 0;
+	startFading: function () {
+		this.fading = true;
+		this.fadingCounter = 1.0;
+	},
+
+	stepFade: function (step) {
+		return this.fadingCounter = Math.max(0, this.fadingCounter - step);
 	},
 
 	render: function (ctx, images) {
-		ctx.globalAlpha = this.opacity;
+		if (this.fading) {
+			ctx.globalAlpha = FADE_OUT_INITIAL_OPACITY * this.fadingCounter;
+		}
 		for (var x = 0, l = this.blocks.length; x < l; x++) {
 			ctx.drawImage(
 				images[this.blocks[x].imageName],
@@ -268,7 +295,7 @@ Line.prototype = {
 var Field = function (width, height) {
 	this.width = width;
 	this.height = height;
-	this.lines = [];
+	this.lines = [];           // back first, front last
 	this.fadingLines = [];
 };
 Field.prototype = {
@@ -299,11 +326,11 @@ Field.prototype = {
 		return this.lines.length;
 	},
 
-	takeBlock: function (x) {
+	takeBlockFromFrontLine: function (x) {
 		return (this.lines.length > 0 && this.getFrontLine().takeBlock(x));
 	},
 
-	fillBlock: function (x) {
+	fillBlockInFrontLine: function (x) {
 		return (this.lines.length > 0 && this.getFrontLine().fillBlock(x));
 	},
 
@@ -314,7 +341,7 @@ Field.prototype = {
 	eraseFrontLine: function () {
 		if (this.lines.length > 0) {
 			var line = this.lines.pop();
-			line.opacity = FADE_OUT_INITIAL_OPACITY;
+			line.startFading();
 			this.fadingLines.unshift(line);
 			return true;
 		}
@@ -325,7 +352,8 @@ Field.prototype = {
 		if (this.fadeLines.length == 0)
 			return;
 		for (var i = this.fadingLines.length - 1; i >= 0; i--) {
-			if (!this.fadingLines[i].fade(step)) {
+			if (this.fadingLines[i].stepFade(step) <= 0) {
+				// if the line has faded out, remove it from the array
 				this.fadingLines.pop();
 			}
 		}
@@ -343,9 +371,9 @@ Field.prototype = {
 			ctx.translate(0, BLOCK_HEIGHT);
 		}
 		var remain = this.height - this.lines.length;
-		for (var i = 0, l = Math.min(this.fadingLines.length, remain); i < l; i++) {
+		for (var i = 0, l = this.fadingLines.length; i < l; i++) {
 			var line = this.fadingLines[i];
-			ctx.translate(0, (FADE_OUT_INITIAL_OPACITY - line.opacity) * remain * BLOCK_HEIGHT);
+			ctx.translate(0, (1.0 - line.fadingCounter) * remain * BLOCK_HEIGHT);
 			line.render(ctx, images);
 			ctx.translate(0, BLOCK_HEIGHT);
 		}
@@ -366,12 +394,13 @@ Shot.TYPE_TAKE = 1;
 Shot.prototype = {
 
 	reach: function () {
+		// when the shot has reached to the front line
 		switch (this.type) {
 			case Shot.TYPE_FILL:
-				this.game.fillBlock(this.col);
+				this.game.fillBlockInFrontLine(this.col);
 				break;
 			case Shot.TYPE_TAKE:
-				this.game.takeBlock(this.col);
+				this.game.takeBlockFromFrontLine(this.col);
 				break;
 		}
 	},
@@ -501,6 +530,9 @@ View.prototype = {
 	},
 
 	gameOver: function () {
+		if (this.isOver) return;
+		this.isOver = true;
+
 		window.removeEventListener("keydown", this.handleKeyDown, false);
 
 		var ctx = this.canvas.getContext("2d");
@@ -516,7 +548,6 @@ View.prototype = {
 		ctx.fillStyle = "#FFFFFF";
 		ctx.fillText("GameOver", this.leftArea.width / 2, this.leftArea.height / 2);
 		ctx.restore();
-		this.isOver = true;
 	},
 
 	clearRect: function (ctx, rect) {
@@ -605,7 +636,7 @@ View.prototype = {
 		ctx.save();
 		this.clearRect(ctx, this.workerArea);
 		this.clipRect(ctx, this.workerArea);
-		ctx.fillStyle = ctx.createLinearGradient(0, 0, 0, 5 + BLOCK_HEIGHT + 5);
+		ctx.fillStyle = ctx.createLinearGradient(0, 0, 0, this.workerArea.height);
 		ctx.fillStyle.addColorStop(0, '#000000');
 		ctx.fillStyle.addColorStop(1, '#333333');
 		ctx.fill();
@@ -690,10 +721,37 @@ View.prototype = {
 };
 
 
-window.Defragger = {
-	start: function (canvas, images, options) {
-		var game = new Game(canvas, images, options);
-		game.start();
+window.Defragger = function (canvas, images, options) {
+	this._hookEvents(options);
+	this._game = new Game(canvas, images, options);
+	this._game.start();
+};
+window.Defragger.prototype = {
+	getLevel: function () {
+		return this._game.level;
+	},
+	getScore: function () {
+		return this._game.score;
+	},
+	getErasedCount: function () {
+		return this._game.erasedCount;
+	},
+	getMaxCombo: function () {
+		return this._game.comboMax;
+	},
+
+	_hookEvents: function (options) {
+		if (options) {
+			var self = this;
+			if (options.onGameStart) {
+				var oldGameStart = options.onGameStart;
+				options.onGameStart = function () { oldGameStart(self) };
+			}
+			if (options.onGameOver) {
+				var oldGameOver = options.onGameOver;
+				options.onGameOver = function () { oldGameOver(self) };
+			}
+		}
 	}
 };
 

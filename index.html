@@ -136,7 +136,7 @@
 		// <![CDATA[
 		
 		window.addEventListener("load", function () {
-			Defragger.start(
+			new Defragger(
 				document.getElementById("canvas"),
 				{
 					logo: document.getElementById("logo"),
@@ -147,6 +147,14 @@
 					worker: document.getElementById("worker"),
 					shot: document.getElementById("shot"),
 					arm: document.getElementById("arm")
+				},
+				{
+					onGameStart: function () {
+						alert("Game start");
+					},
+					onGameOver: function (data) {
+						alert("Your score is " + data.getScore());
+					}
 				}
 			);
 		}, false);
