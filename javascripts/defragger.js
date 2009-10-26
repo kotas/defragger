@@ -1,7 +1,5 @@
 /**
  * Defragger
- *
- * @requires prototype 1.6.1
  */
 
 (function () {
@@ -15,7 +13,7 @@ var SCORE_FACTOR_PER_COMBO   = 0.2;
 var FADE_OUT_INITIAL_OPACITY = 0.5;
 var FADE_OUT_SPEED_BASE      = 0.005;
 var FADE_OUT_SPEED_PER_LEVEL = 0.0002;
-var SHOOT_MOVING_STEP        = 0.25;
+var SHOT_MOVING_STEP         = 0.25;
 var WORKER_MOVING_STEP       = 0.25;
 var LEVEL_UP_INITIAL         = 500;
 var LEVEL_UP_FACTOR          = 1.5;
@@ -33,7 +31,7 @@ var Game = function (canvas, images, options) {
 	this.level        = options.startLevel  || 0;
 	this.maxLevel     = options.maxLevel    || 99;
 	this.stock        = options.startStock  || 5;
-	this.maxShoots    = options.maxShoots   || 3;
+	this.maxShots     = options.maxShots    || 3;
 	this.score        = 0;
 	this.erasedCount  = 0;
 	this.combo        = 0;
@@ -42,7 +40,7 @@ var Game = function (canvas, images, options) {
 
 	this.field  = new Field(this.fieldWidth, this.fieldHeight);
 	this.worker = new Worker(this.fieldWidth);
-	this.shoots = [];
+	this.shots  = [];
 	this.view   = new View(this, canvas, images);
 
 	var initialLines = options.initialLines === undefined ? 3 : options.initialLines;
@@ -133,14 +131,14 @@ Game.prototype = {
 	},
 
 	shootTake: function () {
-		if (this.stock < this.maxStock && this.shoots.length < this.maxShoots) {
-			this.shoots.push(new Shoot(this, this.worker.column, Shoot.TYPE_TAKE));
+		if (this.stock < this.maxStock && this.shots.length < this.maxShots) {
+			this.shots.push(new Shot(this, this.worker.column, Shot.TYPE_TAKE));
 		}
 	},
 
 	shootFill: function () {
-		if (this.stock > 0 && this.shoots.length < this.maxShoots) {
-			this.shoots.push(new Shoot(this, this.worker.column, Shoot.TYPE_FILL));
+		if (this.stock > 0 && this.shots.length < this.maxShots) {
+			this.shots.push(new Shot(this, this.worker.column, Shot.TYPE_FILL));
 		}
 	},
 
@@ -149,11 +147,11 @@ Game.prototype = {
 			this.emitNextLine();
 
 		this.worker.step();
-		for (var i = this.shoots.length - 1; i >= 0; i--) {
-			var row = this.shoots[i].step();
+		for (var i = this.shots.length - 1; i >= 0; i--) {
+			var row = this.shots[i].step();
 			if (row < this.field.getLineCount()) {
-				this.shoots[i].reach();
-				this.shoots.splice(i, 1);
+				this.shots[i].reach();
+				this.shots.splice(i, 1);
 			}
 		}
 
@@ -357,35 +355,35 @@ Field.prototype = {
 };
 
 
-var Shoot = function (game, col, type) {
+var Shot = function (game, col, type) {
 	this.game = game;
 	this.col = col;
 	this.type = type;
 	this.floatRow = game.field.height;
 };
-Shoot.TYPE_FILL = 0;
-Shoot.TYPE_TAKE = 1;
-Shoot.prototype = {
+Shot.TYPE_FILL = 0;
+Shot.TYPE_TAKE = 1;
+Shot.prototype = {
 
 	reach: function () {
 		switch (this.type) {
-			case Shoot.TYPE_FILL:
+			case Shot.TYPE_FILL:
 				this.game.fillBlock(this.col);
 				break;
-			case Shoot.TYPE_TAKE:
+			case Shot.TYPE_TAKE:
 				this.game.takeBlock(this.col);
 				break;
 		}
 	},
 
 	step: function () {
-		this.floatRow -= SHOOT_MOVING_STEP;
+		this.floatRow -= SHOT_MOVING_STEP;
 		return Math.floor(this.floatRow);
 	},
 
 	render: function (ctx, images) {
 		ctx.drawImage(
-			images[this.type == Shoot.TYPE_TAKE ? "arm" : "shot"],
+			images[this.type == Shot.TYPE_TAKE ? "arm" : "shot"],
 			this.col * BLOCK_WIDTH,
 			this.floatRow * BLOCK_HEIGHT - (BLOCK_HEIGHT / 2),
 			BLOCK_WIDTH,
@@ -600,8 +598,8 @@ View.prototype = {
 		ctx.fill();
 		ctx.translate(PADDING, PADDING);
 		this.game.field.render(ctx, this.images);
-		for (var i = 0, l = this.game.shoots.length; i < l; i++)
-			this.game.shoots[i].render(ctx, this.images);
+		for (var i = 0, l = this.game.shots.length; i < l; i++)
+			this.game.shots[i].render(ctx, this.images);
 		ctx.restore();
 
 		ctx.save();
