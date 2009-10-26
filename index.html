@@ -6,6 +6,7 @@
 		<title>デフラガ</title>
 		<link rel="stylesheet" href="stylesheets/defragger.css" charset="utf-8" type="text/css" />
 		<script src="javascripts/defragger.js" charset="utf-8" type="text/javascript"></script>
+		<script src="javascripts/jquery-1.3.2.min.js" charset="utf-8" type="text/javascript"></script>
 	</head>
 	<body>
 		<canvas id="canvas" width="560" height="545">
@@ -22,10 +23,32 @@
 		<img class="preloader" id="arm" src="images/Arm.png" />
 
 		<div id="menu">
+			<a href="#ranking" id="rankingLink">ランキング</a>
 			<a href="#howto" id="howtoLink">デフラガの遊び方</a>
 		</div>
 
-		<div id="howto">
+		<div id="ranking" class="document">
+			<h1>ランキング</h1>
+			<div class="section">
+				<table cellpadding="0" cellspacing="0">
+					<thead>
+						<tr>
+							<th>#</th>
+							<th>名前</th>
+							<th>得点</th>
+							<th>消したライン</th>
+							<th>最大コンボ</th>
+							<th>プレイ時間</th>
+							<th>送信日時</th>
+						</tr>
+					</thead>
+					<tbody id="rankingBody">
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<div id="howto" class="document">
 			<h1>デフラガの遊び方</h1>
 			<p>次々に現れるブロックを入れ替えて消していく、アクションパズルゲームです。</p>
 
@@ -131,38 +154,96 @@
 			</div>
 		</div>
 
+		<div id="gameover">
+			<h1>あなたのスコアを送信</h1>
+			<form id="scoreform" action="javascript:void(0);" method="POST">
+				<input type="hidden" id="timehash" name="timehash" value="" />
+				<input type="hidden" id="time" name="time" value="" />
+				<p id="scores">
+					得点:<input type="text" id="score" name="score" readonly="readonly" value="" /><br />
+					消したライン:<input type="text" id="erased" name="erased" readonly="readonly" value="" /><br />
+					最大コンボ:<input type="text" id="combo" name="combo" readonly="readonly" value="" />
+				</p>
+				<p><label for="nickname">名前:</label><input type="text" id="nickname" name="nickname" value=""><input type="submit" id="submit" value="送信" maxlength="20" /></p>
+			</form>
+		</div>
+
 
 		<script type="text/javascript">
 		// <![CDATA[
 		
-		window.addEventListener("load", function () {
+		$(window).load(function () {
 			new Defragger(
 				document.getElementById("canvas"),
 				{
-					logo: document.getElementById("logo"),
+					logo:       document.getElementById("logo"),
 					blockEmpty: document.getElementById("blockEmpty"),
 					blockSolid: document.getElementById("blockSolid"),
 					blockError: document.getElementById("blockError"),
 					blockFixed: document.getElementById("blockFixed"),
-					worker: document.getElementById("worker"),
-					shot: document.getElementById("shot"),
-					arm: document.getElementById("arm")
+					worker:     document.getElementById("worker"),
+					shot:       document.getElementById("shot"),
+					arm:        document.getElementById("arm")
 				},
 				{
-					onGameStart: function () {
-						alert("Game start");
+					onGameStart: function (data) {
+						$.getJSON("ranking/timehash", {}, function (res) {
+							$("#timehash").val(res.timehash);
+							$("#time").val(res.time);
+						});
 					},
 					onGameOver: function (data) {
-						alert("Your score is " + data.getScore());
+						$("#score").val(data.getScore());
+						$("#erased").val(data.getErasedCount());
+						$("#combo").val(data.getMaxCombo());
+						setTimeout(function () {
+							$("#gameover").fadeIn("normal", function () {
+								$("#nickname").focus();
+							});
+						}, 2000);
 					}
 				}
 			);
-		}, false);
+		});
 		
-		document.getElementById("howtoLink").addEventListener("click", function () {
-			var el = document.getElementById("howto");
-			el.style.display = el.style.display == "block" ? "none" : "block";
-		}, false);
+		$("#howtoLink").click(function () {
+			$("#howto").toggle();
+		});
+		$("#rankingLink").click(function () {
+			if ($("#ranking").is(":visible")) {
+				$("#ranking").slideUp();
+			} else {
+				$.getJSON("ranking", {}, showRanking);
+			}
+			return false;
+		});
+		
+		$("#scoreform").submit(function () {
+			if (!$("#nickname").val())
+				$("#nickname").val("No Name");
+			$.post("ranking", $(this).serialize(), function (data) {
+				$("#gameover").fadeOut("normal");
+				showRanking(data);
+			}, "json");
+			return false;
+		});
+		
+		function showRanking(data) {
+			$("#rankingBody").empty();
+			$.each(data, function (i, score) {
+				$("<tr />")
+					.append($("<td />").addClass("rank").text(i + 1))
+					.append($("<td />").addClass("nickname").text(score.nickname))
+					.append($("<td />").addClass("score").text(score.score))
+					.append($("<td />").addClass("erased").text(score.erased))
+					.append($("<td />").addClass("combo").text(score.combo))
+					.append($("<td />").addClass("playtime").text(Math.ceil((score.posted - score.started)/60) + "分"))
+					.append($("<td />").addClass("posted").text(new Date(score.posted * 1000).toLocaleString()))
+				.appendTo("#rankingBody");
+			});
+			$("#ranking").slideDown("normal");
+			location.hash = "#ranking";
+		}
 		
 		// ]]>
 		</script>
