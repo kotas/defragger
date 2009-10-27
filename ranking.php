@@ -22,12 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
 
 } else {
 
-	if (!isset($_POST['time']) || !ctype_digit($_POST['time']) ||
-		!isset($_POST['timehash']) || !ctype_xdigit($_POST['timehash']) ||
-		sha1($_POST['time'] . $_SERVER['REMOTE_ADDR'] . TIMEHASH_SECRET) !== $_POST['timehash'])
-			{ header(' ', true, 400); die('"bad timehash"'); }
-
 	$score = array(
+		'hash'      => $_POST['timehash'],
 		'started'   => $_POST['time'],
 		'posted'    => time(),
 		'score'     => $_POST['score'],
@@ -38,6 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
 
 	foreach ($score as $key => $value) {
 		switch ($key) {
+			case 'hash':
+				if (!isset($value) || !ctype_xdigit($value))
+					{ header(' ', true, 400); die('"bad request"'); }
+				break;
 			case 'started':
 			case 'score':
 			case 'erased':
@@ -55,6 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
 		}
 	}
 
+	if (sha1($score['started'] . $_SERVER['REMOTE_ADDR'] . TIMEHASH_SECRET) !== $score['hash'])
+		{ header(' ', true, 400); die('"bad timehash"'); }
+
 	$fp = fopen(RANKING_FILE_PATH, 'r+') or die('"internal error"');
 	flock($fp, LOCK_EX) or die('"internal error"');
 
@@ -65,7 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
 		$ranking = array();
 	}
 
-	$ranking[ $_POST['timehash'] ] = $score;
+	foreach ($ranking as $s) {
+		if ($s['hash'] == $score['hash'])
+			{ header(' ', true, 400); die('"double posted"'); }
+	}
+
+	$ranking[] = $score;
 	usort($ranking, create_function('$a, $b', 'return $b["score"] - $a["score"];'));
 	$ranking = array_slice($ranking, 0, RANKING_SAVE_NUM);
 	$ranking_json = json_encode($ranking);

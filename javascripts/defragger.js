@@ -105,8 +105,7 @@ Game.prototype = {
 	},
 
 	fillBlockInFrontLine: function (x) {
-		if (this.stock > 0 && this.field.fillBlockInFrontLine(x)) {
-			this.stock--;
+		if (this.field.fillBlockInFrontLine(x)) {
 			if (this.field.hasCleanFrontLine())
 				this.eraseFrontLine();     // this internally calls view.renderStatus
 			else
@@ -155,7 +154,9 @@ Game.prototype = {
 
 	shootFill: function () {
 		if (this.stock > 0 && this.shots.length < this.maxShots) {
+			this.stock--;
 			this.shots.push(new Shot(this, this.worker.column, Shot.TYPE_FILL));
+			this.view.renderStatus();
 		}
 	},
 
