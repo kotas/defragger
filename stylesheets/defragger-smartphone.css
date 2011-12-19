@@ -1,0 +1,86 @@
+
+section {
+	width: 560px;
+}
+
+#title div[data-role="content"] {
+	text-align: center;
+}
+#game div[data-role="content"] {
+	text-align: center;
+}
+
+
+#canvas {
+	margin: 0 auto;
+}
+
+img.preloader {
+	display: none;
+}
+
+#gameover #scores {
+	font-size: 300%;
+}
+
+.document {
+	background-color: #333;
+	color: #FFF;
+	padding: 10px;
+	font-size: 90%;
+	display: none;
+}
+
+.document h1 {
+	font-size: 120%;
+	margin: 0 0 0 10px;
+	padding: 0;
+}
+.document h2 {
+	font-size: 100%;
+	margin: 0 0 0 10px;
+	padding: 0;
+}
+.document .section {
+	background-color: #222222;
+	margin: 10px 0;
+	padding: 10px;
+}
+
+#howto table {
+	margin: 10px auto;
+}
+#howto table th {
+	text-align: right;
+	padding-right: 10px;
+}
+#howto table td {
+	text-align: left;
+}
+
+#howto ul {
+	list-style-type: none;
+	text-align: left;
+	line-height: 1.5;
+}
+#howto ul img {
+	vertical-align: middle;
+	width: 20px;
+	height: 20px;
+}
+#howto ul li {
+	margin-bottom: 10px;
+}
+
+#howto h3 {
+	font-size: 90%;
+	margin: 10px auto 5px;
+}
+#howto h3 strong {
+	color: #FFFF00;
+}
+
+#howto .example {
+	margin: 5px auto;
+}
+

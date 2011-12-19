@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=600px; initial-scale=0.5; maximum-scale=0.5; user-scalable=0;">
+		<title>デフラガ</title>
+		<link rel="stylesheet" href="stylesheets/jquery.mobile-1.0.css" charset="utf-8">
+		<link rel="stylesheet" href="stylesheets/defragger-smartphone.css" charset="utf-8">
+		<script src="javascripts/jquery-1.7.1.min.js" charset="utf-8"></script>
+		<script src="javascripts/jquery.mobile-1.0.min.js" charset="utf-8"></script>
+		<script src="javascripts/defragger-smartphone.js" charset="utf-8"></script>
+	</head>
+	<body>
+
+		<section data-role="page" id="title" data-title="タイトル画面">
+			<header data-role="header">
+				<h1>デフラガ</h1>
+			</header>
+			<div data-role="content">
+				<img id="logo" src="images/Logo.png" width="80%" />
+				<a href="#game" data-role="button">スタート</a>
+			</div>
+			<div data-role="footer">
+			</div>
+		</section>
+
+		<section data-role="page" id="game" data-title="ゲーム画面">
+			<header data-role="header">
+				<h1>デフラガ</h1>
+				<a href="#howto" data-icon="info" class="ui-btn-right">Howto</a>
+			</header>
+			<div data-role="content">
+				<canvas id="canvas" width="560" height="545">
+					<p>未対応ブラウザのようです＞＜</p>
+				</canvas>
+			</div>
+			<div data-role="footer">
+			</div>
+		</section>
+
+		<section data-role="page" id="gameover" data-title="Game Over" data-add-back-btn="true">
+			<header data-role="header">
+				<h1>Game Over</h1>
+			</header>
+			<div data-role="content">
+				<p id="scores">
+					得点:<span id="score"></span><br>
+					消したライン:<span id="erased"></span><br>
+					最大コンボ:<span id="combo"></span>
+				</p>
+			</div>
+			<div data-role="footer">
+			</div>
+		</section>
+
+		<section data-role="page" id="howto" data-title="How to Play" data-add-back-btn="true">
+			<header data-role="header">
+				<h1>How to Play</h1>
+			</header>
+			<div data-role="content">
+				<p>次々に現れるブロックを入れ替えて消していく、アクションパズルゲームです。</p>
+
+				<section>
+					<h2>キー入力</h2>
+					<table>
+						<tr><th>←</th><td>自機を左に移動</td></tr>
+						<tr><th>→</th><td>自機を右に移動</td></tr>
+						<tr><th>↑</th><td>データをアップロード</td></tr>
+						<tr><th>↓</th><td>データをダウンロード</td></tr>
+						<tr><th>Space</th><td>一列追加</td></tr>
+					</table>
+				</section>
+
+				<section>
+					<h2>ブロックの紹介</h2>
+
+					<ul>
+						<li>
+							<img src="images/BlockSolid.png" /> はデータが書き込まれているブロックです。<br />
+							このブロックからデータをダウンロードすると <img src="images/BlockEmpty.png" /> になります。<br />
+							ダウンロードしたデータは15個までストックでき、他のブロックにアップロードできます。<br />
+							このブロックに対してデータのアップロードはできません。
+						</li>
+						<li>
+							<img src="images/BlockEmpty.png" /> は何もデータが書き込まれていない空ブロックです。<br />
+							ストックしておいたデータをアップロードする事で <img src="images/BlockSolid.png" /> になります。<br />
+							このブロックに対してデータのダウンロードはできません。
+						</li>
+						<li>
+							<img src="images/BlockError.png" /> はエラーブロックです。<br />
+							データをアップロードする事で <img src="images/BlockSolid.png" /> になります。<br />
+							データをダウンロードする事で <img src="images/BlockEmpty.png" /> になります。<br />
+							このブロックが含まれている限り列を消す事ができませんので、早めに処理が必要です。
+						</li>
+						<li>
+							<img src="images/BlockFixed.png" /> は移動不可ブロックです。<br />
+							このブロックに対してデータのアップロードやダウンロードはできません。<br />
+							このブロックが含まれていても、列は消す事ができます。
+						</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>ゲームの進め方</h2>
+
+					<p>自機から見て一番手前の列から順番に消していき、高スコアを目指します。</p>
+
+					<p>列を消すには一列中のブロックすべてを「空ブロック」、または「データ書き込み済みブロック」にする必要があります。</p>
+					<div class="example">
+						<h3>例1: 一列すべて「空ブロック」なら消える</h3>
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockEmpty.png" />
+					</div>
+					<div class="example">
+						<h3>例2: 一列すべて「データ書き込み済みブロック」なら消える</h3>
+						<img src="images/BlockSolid.png" />
+						<img src="images/BlockSolid.png" />
+						<img src="images/BlockSolid.png" />
+						<img src="images/BlockSolid.png" />
+						<img src="images/BlockSolid.png" />
+						<img src="images/BlockSolid.png" />
+					</div>
+
+					<p>また、例え列の中に「移動不可ブロック」が含まれていても、他が全て同じブロックなら、その列は消えます。</p>
+					<div class="example">
+						<h3>例3: 一列の中に「移動不可ブロック」が含まれていても消える</h3>
+						<img src="images/BlockSolid.png" />
+						<img src="images/BlockSolid.png" />
+						<img src="images/BlockFixed.png" />
+						<img src="images/BlockSolid.png" />
+						<img src="images/BlockSolid.png" />
+						<img src="images/BlockSolid.png" />
+					</div>
+					<div class="example">
+						<h3>例4: 一列の中に「移動不可ブロック」がいくつ含まれていても消える</h3>
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockFixed.png" />
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockFixed.png" />
+						<img src="images/BlockEmpty.png" />
+					</div>
+
+					<p>しかし、列の中に「エラーブロック」が含まれている場合は、エラーブロックが無くならない限り、その列は消えません。</p>
+					<div class="example">
+						<h3>例5: 一列の中に「エラーブロック」が含まれていると<strong>消えない</strong></h3>
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockError.png" />
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockEmpty.png" />
+						<img src="images/BlockEmpty.png" />
+					</div>
+
+					<p>列を消しきれず、自機のもとにまであふれてしまった時点でゲームオーバーになります。</p>
+
+					<p>列がフェードアウトして消えている間に次の列を消す事でコンボとなり、より高得点を得られます。</p>
+				</section>
+			</div>
+			<div data-role="footer">
+			</div>
+		</section>
+
+
+
+		<img class="preloader" id="blockEmpty" src="images/BlockEmpty.png" />
+		<img class="preloader" id="blockSolid" src="images/BlockSolid.png" />
+		<img class="preloader" id="blockError" src="images/BlockError.png" />
+		<img class="preloader" id="blockFixed" src="images/BlockFixed.png" />
+		<img class="preloader" id="worker" src="images/Worker.png" />
+		<img class="preloader" id="shot" src="images/Shot.png" />
+		<img class="preloader" id="arm" src="images/Arm.png" />
+
+		<script>
+
+		var defragger = new Defragger(
+			document.getElementById("canvas"),
+			{
+				logo:       document.getElementById("logo"),
+				blockEmpty: document.getElementById("blockEmpty"),
+				blockSolid: document.getElementById("blockSolid"),
+				blockError: document.getElementById("blockError"),
+				blockFixed: document.getElementById("blockFixed"),
+				worker:     document.getElementById("worker"),
+				shot:       document.getElementById("shot"),
+				arm:        document.getElementById("arm")
+			},
+			{
+				onGameOver: function (data) {
+					$("#score").text(data.getScore());
+					$("#erased").text(data.getErasedCount());
+					$("#combo").text(data.getMaxCombo());
+					setTimeout(function () {
+						$.mobile.changePage($("#gameover"), {
+							transition: "pop",
+							reverse: false,
+							changeHash: false
+						});
+					}, 2000);
+				}
+			}
+		);
+
+		$(function () {
+			$("#game").
+				bind("pageshow" ,function () {
+					defragger.start();
+				}).
+				bind("pagehide", function () {
+					defragger.pause();
+				});
+		});
+
+		</script>
+	</body>
+</html>
