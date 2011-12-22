@@ -6,12 +6,22 @@ section {
 #title div[data-role="content"] {
 	text-align: center;
 }
+
+#game {
+	width: 100%;
+	height: 100%;
+}
 #game div[data-role="content"] {
+	width: 100%;
+	height: 100%;
 	text-align: center;
+	padding: 0;
+	margin: 0;
+	position: relative;
 }
 
-
 #canvas {
+	width: 100%;
 	margin: 0 auto;
 }
 
@@ -19,33 +29,6 @@ img.preloader {
 	display: none;
 }
 
-#gameover #scores {
-	font-size: 300%;
-}
-
-.document {
-	background-color: #333;
-	color: #FFF;
-	padding: 10px;
-	font-size: 90%;
-	display: none;
-}
-
-.document h1 {
-	font-size: 120%;
-	margin: 0 0 0 10px;
-	padding: 0;
-}
-.document h2 {
-	font-size: 100%;
-	margin: 0 0 0 10px;
-	padding: 0;
-}
-.document .section {
-	background-color: #222222;
-	margin: 10px 0;
-	padding: 10px;
-}
 
 #howto table {
 	margin: 10px auto;
@@ -62,6 +45,8 @@ img.preloader {
 	list-style-type: none;
 	text-align: left;
 	line-height: 1.5;
+	margin: 10px 0;
+	padding: 0;
 }
 #howto ul img {
 	vertical-align: middle;
@@ -77,10 +62,14 @@ img.preloader {
 	margin: 10px auto 5px;
 }
 #howto h3 strong {
-	color: #FFFF00;
+	color: #CC0000;
 }
 
 #howto .example {
 	margin: 5px auto;
+}
+#howto .example img {
+	width: 30px;
+	height: 30px;
 }
 

@@ -18,8 +18,8 @@ var SHOT_MOVING_STEP         = 0.25;
 var WORKER_MOVING_STEP       = 0.25;
 var LEVEL_UP_INITIAL         = 500;
 var LEVEL_UP_FACTOR          = 1.5;
-var BLOCK_WIDTH              = 48;
-var BLOCK_HEIGHT             = 48;
+var BLOCK_WIDTH              = 40;
+var BLOCK_HEIGHT             = 40;
 var PADDING                  = 5;
 var COMBO_MESSAGE_INITIAL    = 1.0;
 var COMBO_MESSAGE_SPEED      = 0.05;
@@ -30,29 +30,16 @@ var Game = function (canvas, images, options) {
 	this.started      = false;
 	this.fieldWidth   = options.fieldWidth  || 6;
 	this.fieldHeight  = options.fieldHeight || 10;
-	this.maxStock     = options.maxStock    || 15;
-	this.level        = options.startLevel  || 0;
+	this.maxStock     = options.maxStock    || 16;
 	this.maxLevel     = options.maxLevel    || 99;
-	this.stock        = options.startStock  || 5;
 	this.maxShots     = options.maxShots    || 3;
-	this.score        = 0;
-	this.erasedCount  = 0;
-	this.combo        = 0;
-	this.comboMax     = 0;
-	this.levelUpScore = LEVEL_UP_INITIAL;
+	this.startLevel   = options.startLevel  || 0;
+	this.startStock   = options.startStock  || 4;
+	this.initialLines = options.initialLines === undefined ? 3 : options.initialLines;
 	this.onGameStart  = options.onGameStart;
 	this.onGameOver   = options.onGameOver;
-
-	this.field  = new Field(this.fieldWidth, this.fieldHeight);
-	this.worker = new Worker(this.fieldWidth);
-	this.shots  = [];
-	this.view   = new View(this, canvas, images);
-
-	// Set up initial lines
-	var initialLines = options.initialLines === undefined ? 3 : options.initialLines;
-	for (var i = 0; i < initialLines; i++) {
-		this.field.emitNextLine();
-	}
+	this.view         = new View(this, canvas, images);
+	this.reset();
 };
 Game.prototype = {
 
@@ -78,6 +65,26 @@ Game.prototype = {
 	pause: function () {
 		clearInterval(this.updateTimer);
 		this.updateTimer = null;
+	},
+
+	reset: function () {
+		this.level        = this.startLevel;
+		this.stock        = this.startStock;
+		this.score        = 0;
+		this.erasedCount  = 0;
+		this.combo        = 0;
+		this.comboMax     = 0;
+		this.levelUpScore = LEVEL_UP_INITIAL;
+		this.field        = new Field(this.fieldWidth, this.fieldHeight);
+		this.worker       = new Worker(this.fieldWidth);
+		this.shots        = [];
+
+		// Set up initial lines
+		for (var i = 0; i < this.initialLines; i++) {
+			this.field.emitNextLine();
+		}
+
+		this.view.gameReset();
 	},
 
 	gameOver: function () {
@@ -500,21 +507,6 @@ var View = function (game, canvas, images) {
 	this.game = game;
 	this.canvas = canvas;
 	this.images = images;
-
-	this.isOver = false;
-	this.comboOpacity = 0;
-	this.comboMessage = null;
-
-	this.onMouseDownHandler = null;
-	this.onMouseMoveHandler = null;
-	this.onMouseUpHandler = null;
-	this.mouseIsDown = false;
-	this.mouseDownStartTime = null;
-	this.mouseDownPos = { x: null, y: null };
-	this.mouseDirection = View.Directions.NEUTRAL;
-	this.mouseDownTimer = null;
-	this.prevMouseUpTime = null;
-	this.anyActionDone = false;
 };
 View.Directions = {
 	NEUTRAL: 0,
@@ -525,17 +517,35 @@ View.Directions = {
 };
 View.prototype = {
 
-	gameStart: function () {
+	gameReset: function () {
+		this.isOver = false;
+		this.comboOpacity = 0;
+		this.comboMessage = null;
+
+		this.onMouseDownHandler = null;
+		this.onMouseMoveHandler = null;
+		this.onMouseUpHandler = null;
+		this.mouseIsDown = false;
+		this.mouseDownStartTime = null;
+		this.mouseDownPos = { x: null, y: null };
+		this.mouseDirection = View.Directions.NEUTRAL;
+		this.mouseDownTimer = null;
+		this.prevMouseUpTime = null;
+		this.anyActionDone = false;
+
 		this.updatePositions();
-		this.renderLogo();
 		this.renderField();
 		this.renderStatus();
+	},
+
+	gameStart: function () {
+		this.gameReset();
 
 		this.onMouseDownHandler = $.proxy(this.onMouseDown, this);
 		this.onMouseMoveHandler = $.proxy(this.onMouseMove, this);
 		this.onMouseUpHandler = $.proxy(this.onMouseUp, this);
 
-		$(document)
+		$(this.canvas)
 			.bind("vmousedown", this.onMouseDownHandler)
 			.bind("vmousemove", this.onMouseMoveHandler)
 			.bind("vmouseup", this.onMouseUpHandler);
@@ -623,7 +633,7 @@ View.prototype = {
 		if (this.isOver) return;
 		this.isOver = true;
 
-		$(document)
+		$(this.canvas)
 			.unbind("vmousedown", this.onMouseDownHandler)
 			.unbind("vmousemove", this.onMouseMoveHandler)
 			.unbind("vmouseup", this.onMoudeUpHandler);
@@ -659,53 +669,37 @@ View.prototype = {
 		    fieldHeight = this.game.field.height * BLOCK_HEIGHT;
 
 		this.fieldArea = {
-			left: 0,
-			top: 0,
+			left: PADDING,
+			top: PADDING,
 			width: PADDING + fieldWidth + PADDING,
 			height: PADDING + fieldHeight + PADDING
 		};
 		this.workerArea = {
-			left: 0,
+			left: this.fieldArea.left,
 			top: this.fieldArea.height,
 			width: this.fieldArea.width,
 			height: PADDING + BLOCK_HEIGHT + PADDING
 		};
 		this.leftArea = {
-			left: 0,
-			top: 0,
+			left: this.fieldArea.left,
+			top: this.fieldArea.top,
 			width: this.fieldArea.width,
 			height: this.fieldArea.height + this.workerArea.height
 		};
+		this.statusArea = {
+			left: this.leftArea.width + PADDING,
+			top: 0,
+			width:  PADDING + 150 + PADDING,
+		};
 		this.stockArea = {
-			left: this.leftArea.width,
-			width: PADDING + 250 + PADDING,
+			left: this.leftArea.width + PADDING,
+			width: this.statusArea.width,
 		};
 		this.stockArea.cols = Math.floor(this.stockArea.width / BLOCK_WIDTH);
 		this.stockArea.rows = Math.ceil(this.game.maxStock / this.stockArea.cols);
 		this.stockArea.height = PADDING + this.stockArea.rows * BLOCK_HEIGHT + PADDING;
 		this.stockArea.top = this.leftArea.height - this.stockArea.height;
-		this.statusArea = {
-			left: this.leftArea.width,
-			width: this.stockArea.width,
-			height: PADDING + 170 + PADDING,
-		};
-		this.statusArea.top = this.stockArea.top - this.statusArea.height;
-		this.logoArea = {
-			left: this.leftArea.width + (this.statusArea.width - 200)/2,
-			top: 0,
-			width: 200,
-			height: 200
-		};
-	},
-
-	renderLogo: function () {
-		var ctx = this.canvas.getContext("2d");
-
-		ctx.save();
-		this.clearRect(ctx, this.logoArea);
-		this.clipRect(ctx, this.logoArea);
-		ctx.drawImage(this.images["logo"], 0, 0);
-		ctx.restore();
+		this.statusArea.height = this.stockArea.top;
 	},
 
 	renderField: function () {
@@ -761,39 +755,45 @@ View.prototype = {
 		ctx.save();
 		this.clearRect(ctx, this.statusArea);
 		this.clipRect(ctx, this.statusArea);
-		ctx.fillStyle = "#333333";
-		ctx.fill();
+
 		ctx.translate(PADDING, PADDING);
 
-		var fontSize = 40;
+		var statuses = [
+			["Score", this.game.score],
+			["Level", this.game.level],
+			["Erased", this.game.erasedCount],
+			["Max Combo", this.game.comboMax]
+		];
+
+		var captionFontSize = 20,
+			captionFontColor = "#666666",
+			captionFont = "bold " + captionFontSize + "px Helvetica",
+			valueFontSize = 30,
+			valueFontColor = "#000000",
+			valueFont = "bold " + valueFontSize + "px Helvetica",
+			y = 0;
 
 		ctx.textBaseline = "top";
-		ctx.font = "bold "+fontSize+"px Arial";
-		ctx.fillStyle = "#666666";
-		ctx.fillText("Score", PADDING, 0);
-		ctx.fillText("Level", PADDING, fontSize);
-		ctx.fillText("Erased", PADDING, fontSize*2);
-		ctx.fillText("M.Combo", PADDING, fontSize*3);
+		for (var i = 0, n = statuses.length; i < n; i++) {
+			ctx.font = captionFont;
+			ctx.fillStyle = captionFontColor;
+			ctx.fillText(statuses[i][0], 0, y);
+			y += captionFontSize;
 
-		var w = this.statusArea.width - PADDING - PADDING*2;
-		ctx.textAlign = "right";
-		ctx.font = "bold "+fontSize+"px Arial";
-		ctx.fillStyle = "#FFFFFF";
-		ctx.fillText(this.game.score, w, 0);
-		ctx.fillText(this.game.level, w, fontSize);
-		ctx.fillText(this.game.erasedCount, w, fontSize*2);
-		ctx.fillText(this.game.comboMax, w, fontSize*3);
+			ctx.font = valueFont;
+			ctx.fillStyle = valueFontColor;
+			ctx.fillText(statuses[i][1], 0, y);
+			y += valueFontSize + PADDING;
+		}
 		ctx.restore();
 
 		ctx.save();
 		this.clearRect(ctx, this.stockArea);
 		this.clipRect(ctx, this.stockArea);
-		ctx.fillStyle = "#FFF";
-		ctx.fill();
 		for (var i = 0, n = this.game.stock; i < n; i++) {
 			ctx.drawImage(this.images["shot"],
 				(i % this.stockArea.cols) * BLOCK_WIDTH,
-				Math.floor(i / this.stockArea.cols) * BLOCK_HEIGHT,
+				Math.floor(i / this.stockArea.cols) * BLOCK_HEIGHT + PADDING,
 				BLOCK_WIDTH, BLOCK_HEIGHT);
 		}
 		if (this.game.stock == this.game.maxStock) {
@@ -824,6 +824,9 @@ window.Defragger.prototype = {
 	},
 	pause: function () {
 		this._game.pause();
+	},
+	reset: function () {
+		this._game.reset();
 	},
 	getLevel: function () {
 		return this._game.level;
